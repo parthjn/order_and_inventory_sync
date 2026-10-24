@@ -1,0 +1,26 @@
+flowchart LR
+  WEB["Website"]
+  NYK["Nykaa"]
+  BLK["Blinkit"]
+  FK["Flipkart"]
+  API["NestJS API<br/>2 instances behind a load balancer"]
+  POLL["Flipkart poller"]
+  PG[("Postgres<br/>orders, stock, outbox")]
+  RD[("Redis queues<br/>one per channel, one for ERP")]
+  WK["Channel workers<br/>Nykaa, Flipkart, Blinkit, Website"]
+  EW["ERP worker"]
+  ERP["Business Central"]
+  OUT["The same four channels"]
+
+  WEB -->|"1. webhook"| API
+  NYK -->|"1. webhook"| API
+  BLK -->|"1. webhook"| API
+  POLL -->|"1. poll every 2 min"| FK
+  POLL --> PG
+  API -->|"2. one transaction:<br/>order, stock, outbox"| PG
+  PG -->|"3. outbox relay"| RD
+  RD -->|"4. jobs"| WK
+  RD -->|"4. jobs"| EW
+  WK -->|"5. push stock"| OUT
+  EW -->|"5. send order"| ERP
+  WK & EW -.->|"read what to send,<br/>save the result"| PG
